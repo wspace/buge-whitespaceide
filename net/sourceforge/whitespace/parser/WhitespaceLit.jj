@@ -1,0 +1,241 @@
+
+
+// NOTE: Grammar is an LL(1) conversion of whitespace.
+
+/*
+ * ---------------------
+ *  Known WS apps
+ * ---------------------
+ *
+ * calc.ws  -  works
+ * fact.ws  -  works
+ * fibonacci.ws  -  works
+ * hanoi.ws  -  works
+ * hworld.ws  -  works
+ * name.ws  -  works
+ * quine-2.ws  -  Encountered "\n" at line 900, column 9. Was expecting one of: "\t" ..., " " ...
+ * quine.ws  -  works
+ * rot13.ws  -  Encountered "<EOF>" at line 166, column 1. Was expecting one of: "\t" ..., " " ..., "\n" ...
+ * tutorial.htm  -  Encountered "<EOF>" at line 138, column 1. Was expecting one of: "\t" ..., " " ..., "\n" ...
+ *
+ */
+
+
+PARSER_BEGIN(Whitespace)
+
+public class Whitespace {
+
+	static int sign = 1;
+	static String number = "";
+
+	public static void main(String[] args) throws ParseException {
+		Whitespace parser = new Whitespace(System.in);
+		parser.Input();
+	}
+	
+}
+
+PARSER_END(Whitespace)
+
+// Whitespace works with tabs, spaces and linefeeds, so we define these as tokens.
+TOKEN : { <TAB: "\t"> | <SPACE: " "> | <LF: "\n"> }
+
+// Ignore all non-whitespace symbols... after all, isn't that what whitespace is about? ;-)
+SKIP : { <WS: (~["\t"," ","\n"])+ > }
+
+
+// --- PROJECTIONS ---------------
+
+
+void Input() :
+{}
+{
+	// A WS programm consists of 0 or more commands followed by an EOF
+	( Command() )* <EOF>
+}
+
+void Command() :
+{}
+{
+	<SPACE> StackManipulation()
+|	<TAB> ArithHeapIO()
+|	<LF> FlowControl()
+}
+
+void StackManipulation() :
+{}
+{
+	<SPACE> Number() {System.out.print("PSH ");} printNum()
+|	<LF> DplSwpDsc()
+}
+
+void DplSwpDsc() :
+{}
+{
+	<SPACE> ( { System.out.println("DPL"); } )
+|	<TAB> ( { System.out.println("SWP"); } )
+|	<LF> ( { System.out.println("DSC"); } )
+}
+
+
+void ArithHeapIO() :
+{}
+{
+	<SPACE> Arithmetic()
+|	<TAB> HeapAccess()
+|	<LF> IO()
+}
+
+void Arithmetic() :
+{}
+{
+	<SPACE> AddSubMul()
+|	<TAB> DivMod()
+}
+
+void AddSubMul() :
+{}
+{
+	<SPACE> ( { System.out.println("ADD"); } )
+|	<TAB> ( { System.out.println("SUB"); } )
+|	<LF> ( { System.out.println("MUL"); } )
+}
+
+void DivMod() :
+{}
+{
+	<SPACE> ( { System.out.println("DIV"); } )
+|	<TAB> ( { System.out.println("MOD"); } )
+}
+
+void HeapAccess() :
+{}
+{
+	<SPACE> ( { System.out.println("STR"); } )
+|	<TAB> ( { System.out.println("RTR"); } )
+}
+
+void IO() :
+{}
+{
+	<SPACE> Output()
+|	<TAB> Read()
+}
+
+void Output() :
+{}
+{
+	<SPACE> ( { System.out.println("OPC"); } )
+|	<TAB> ( { System.out.println("OPN"); } )
+}
+
+void Read() :
+{}
+{
+	<SPACE> ( { System.out.println("RDC"); } )
+|	<TAB> ( { System.out.println("RDN"); } )
+}
+
+void FlowControl() :
+{}
+{
+	<SPACE> LblSubJpu()
+|	<TAB> JpzJpnRet()
+|	<LF> <LF> ( { System.out.println("END"); } ) // End
+}
+
+void LblSubJpu() :
+{}
+{
+	<SPACE> Label() { System.out.print("LBL "); } printNum()
+|	<TAB> Label() { System.out.print("SUB "); } printNum()
+|	<LF> Label() { System.out.print("JPU "); } printNum()
+}
+
+void JpzJpnRet() :
+{}
+{
+	<SPACE> Label() { System.out.print("JPZ ");} printNum()
+|	<TAB> Label() { System.out.print("JPN ");} printNum()
+|	<LF> ( { System.out.println("RET"); } )
+}
+
+// DATATYPES --------------------------
+
+void Label() :
+{}
+{
+	{ number = ""; sign=1; } // Reset the buffers
+	
+	// A label consists of 1 or more digits followed by a LF
+	( Digit() )+ <LF>
+	
+}
+
+
+void Number() :
+{}
+{
+	{ number = ""; } // Reset the buffers
+	
+	// A number consists of a sign followed by 0 or more digits
+	Sign() (Digit())* <LF>
+}
+
+void Sign() :
+{}
+{
+	<SPACE> { sign = 1; }
+|	<TAB> { sign = -1; }
+}
+
+void Digit() :
+{}
+{
+	<SPACE>  { number += "0"; }
+|	<TAB> {number += "1"; }
+}
+
+// FUNCTIONS ----------------------------
+
+/*
+ * Prints numbers in the form:
+ *
+ * "0x123ABC (c)\n" or
+ * "0x123ABC\n"
+ *
+ * as appropriate
+ */
+void printNum() :
+{}
+{
+	{
+	
+	String hex = "";
+	int num = 0;
+	
+	// Ensure that we can break up the number into blocks of 4bit, and ensure it has at least one block.
+	while (number.length() % 4 != 0 || number.length() < 1) {
+		number = "0" + number;
+	}
+	
+	// Read out 4bit at a time and convert them to a hex digit.
+	for (int i = 0; i < number.length(); i += 4) {
+		String substr = number.substring(i, i+4);
+		hex += Integer.toHexString(Integer.parseInt(substr, 2)).toUpperCase();
+	}
+	
+	// If the number is small enough, calculate the integer representation.
+	if (hex.length() <= 2) {
+		num = Integer.parseInt(number, 2);
+	}
+	
+	String out = "0x" + hex;
+	// If the integer is between 32 and 126, we will display a character representation as well.
+	out += (32 <= num && num <= 126) ? " (" + ((char) num) + ")" : "";
+	
+	System.out.println(out);
+	
+	}
+	
+}
