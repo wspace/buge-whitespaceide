@@ -139,16 +139,16 @@ void Read() :
 void FlowControl() :
 {}
 {
-	<SPACE> LblSubJpu()
+	<SPACE> LblBraJpu()
 |	<TAB> JpzJpnRet()
 |	<LF> <LF> ( { System.out.println("END"); } ) // End
 }
 
-void LblSubJpu() :
+void LblBraJpu() :
 {}
 {
 	<SPACE> Label() { System.out.print("LBL "); } printNum()
-|	<TAB> Label() { System.out.print("SUB "); } printNum()
+|	<TAB> Label() { System.out.print("BRA "); } printNum()
 |	<LF> Label() { System.out.print("JPU "); } printNum()
 }
 
